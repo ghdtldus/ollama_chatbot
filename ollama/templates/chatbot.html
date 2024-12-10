@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <!-- Bootstrap CSS 추가 -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .chat-box {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        .key-topic {
+            font-weight: bold;
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .bot {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .positive {
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .negative {
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .neutral {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-box">
+        <div class="key-topic" id="keyTopic">Loading...</div> <!-- 대표 키워드 표시 영역 -->
+        <div id="chat"></div>
+        <div class="input-group">
+            <input type="text" class="form-control" id="messageInput" placeholder="Type your message..." onkeydown="handleKeyPress(event)">
+            <div class="input-group-append">
+                <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS 및 jQuery 추가 -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // 서버에서 대표 키워드 가져오기
+        fetch('/keytopic')
+            .then(response => response.json())
+            .then(data => {
+                const keyTopicDiv = document.getElementById('keyTopic');
+                keyTopicDiv.textContent = `대표 키워드: ${data.keytopic}`;
+            })
+            .catch(error => {
+                const keyTopicDiv = document.getElementById('keyTopic');
+                keyTopicDiv.textContent = "대표 키워드 로드 실패";
+            });
+
+        // 메시지 전송 함수
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const chatBox = document.getElementById('chat');
+            const userMessage = input.value;
+
+            if (!userMessage.trim()) return;
+
+            // 사용자 메시지 추가
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.textContent = 'You: ' + userMessage;
+            chatBox.appendChild(userDiv);
+
+            // 입력 초기화
+            input.value = '';
+
+            // 서버에 메시지 전송
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userMessage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botMessage = data.message || data.error;
+                const botDiv = document.createElement('div');
+                botDiv.className = 'message bot ' + (data.sentiment || 'neutral'); // 감정별 클래스 적용
+                botDiv.textContent = 'Bot: ' + botMessage;
+                chatBox.appendChild(botDiv);
+
+                // 스크롤을 아래로 이동
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'message bot';
+                errorDiv.textContent = 'Bot: Error occurred!';
+                chatBox.appendChild(errorDiv);
+            });
+        }
+
+        // Enter 키 처리 함수
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+                event.preventDefault(); // 기본 Enter 동작 방지
+            }
+        }
+    </script>
+</body>
+</html>
